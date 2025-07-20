@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🌍 World Insight Dashboard – Grid Ansicht</title>
+<style>
+  body {
+    margin: 0; padding: 0; font-family: Arial, sans-serif;
+    background: #f5f5f5 url('https://www.transparenttextures.com/patterns/marble.png');
+    color: #0f172a;
+  }
+  header {
+    background: #c0c0c0cc;
+    text-align: center;
+    padding: 1rem;
+    font-size: 1.5rem;
+    color: #0f172a;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(255 255 255 / 0.6);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(320px,1fr));
+    gap: 10px;
+    padding: 10px;
+  }
+  .tile {
+    background: #ffffffdd;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 400px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .tile header {
+    background: #d1d1d1cc;
+    padding: 0.5rem;
+    font-weight: bold;
+    font-size: 1rem;
+    color: #333;
+    flex-shrink: 0;
+  }
+  iframe {
+    flex-grow: 1;
+    border: none;
+    width: 100%;
+  }
+  .button-link {
+    margin: auto;
+    padding: 1rem;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    width: 90%;
+    max-width: 300px;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+  }
+  .button-link:hover {
+    background: #1d4ed8;
+  }
+  footer {
+    text-align:center;
+    font-size: 0.9rem;
+    color: #555;
+    margin: 20px 0 30px;
+  }
+</style>
+</head>
+<body>
+<header>🌐 World Insight Dashboard – Grid Ansicht</header>
+
+<div class="grid" id="dashboard-grid">
+  <!-- Tiles werden hier dynamisch per JavaScript eingefügt -->
+</div>
+
+<footer>🔒 Manche Seiten erlauben kein Einbetten und werden als Button geöffnet.</footer>
+
+<script>
+  const tools = [
+    {name: "Liveuamap", url: "https://liveuamap.com", embeddable: true},
+    {name: "Ground News", url: "https://ground.news", embeddable: false},
+    {name: "OEC Trade Map", url: "https://oec.world", embeddable: true},
+    {name: "Internet Archive", url: "https://archive.org", embeddable: false},
+    {name: "Wayback Machine", url: "https://web.archive.org", embeddable: false},
+    {name: "Nextstrain", url: "https://nextstrain.org", embeddable: true},
+    {name: "Sentinel EO Browser", url: "https://apps.sentinel-hub.com/eo-browser", embeddable: true},
+    {name: "WikiMap", url: "https://wikimap.toolforge.org", embeddable: true},
+    {name: "Google Trends Worldwide", url: "https://trends.google.com/trends/trendingsearches/worldwide", embeddable: false},
+    {name: "Humanitarian Data Exchange (HDX)", url: "https://data.humdata.org", embeddable: true},
+    {name: "NOAA Space Weather Center", url: "https://www.swpc.noaa.gov", embeddable: false},
+    {name: "Our World In Data", url: "https://ourworldindata.org", embeddable: false},
+    {name: "EarthCam", url: "https://www.earthcam.com", embeddable: false},
+    {name: "Zoom Earth", url: "https://zoom.earth", embeddable: true},
+    {name: "Windy (Wetter & Wind)", url: "https://www.windy.com", embeddable: true},
+    {name: "Volcano Discovery", url: "https://volcano.si.edu", embeddable: false},
+    {name: "Window Swap", url: "https://www.window-swap.com", embeddable: true}
+  ];
+
+  const grid = document.getElementById("dashboard-grid");
+
+  tools.forEach(tool => {
+    const tile = document.createElement("div");
+    tile.className = "tile";
+
+    const header = document.createElement("header");
+    header.textContent = tool.name;
+    tile.appendChild(header);
+
+    if (tool.embeddable) {
+      const iframe = document.createElement("iframe");
+      iframe.src = tool.url;
+      tile.appendChild(iframe);
+    } else {
+      const link = document.createElement("a");
+      link.href = tool.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.className = "button-link";
+      link.textContent = "Öffne " + tool.name;
+      tile.appendChild(link);
+    }
+
+    grid.appendChild(tile);
+  });
+</script>
+</body>
+</html>
