@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Worldsite</title>
+  <link rel="stylesheet" href="style.css" />
+  <script defer src="script.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: var(--background);
+  color: var(--text-color);
+  transition: background-color 0.3s, color 0.3s;
+}
+:root {
+  --background: #f0f2f5;
+  --text-color: #111;
+  --card-bg: #fff;
+}
+body.dark {
+  --background: #121212;
+  --text-color: #f0f0f0;
+  --card-bg: #1f1f1f;
+}
+.tool-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+.tool-window {
+  background-color: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.tool-window:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.window-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  font-weight: bold;
+  color: #fff;
+}
+.window-controls button {
+  margin-left: 4px;
+  cursor: pointer;
+}
+.window-body {
+  padding: 12px 16px;
+  background: var(--card-bg);
+  flex: 1;
+}
+@media screen and (max-width: 600px) {
+  .tool-container {
+    grid-template-columns: 1fr;
+    padding: 8px;
+  }
+}
+</style>
+
+
+<link rel="manifest" href="manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
+  }
+</script>
+
+
+<style>
+.category-wetter h3 { color: #2196f3; font-weight: bold; }
+.category-bildung h3 { color: #3f51b5; font-weight: bold; }
+.category-kultur h3 { color: #9c27b0; font-weight: bold; }
+.category-shopping h3 { color: #e91e63; font-weight: bold; }
+.category-sport h3 { color: #4caf50; font-weight: bold; }
+.category-gaming h3 { color: #ff9800; font-weight: bold; }
+</style>
+
+
+<style>
+.tool-window {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.tool-window:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+button, .settings-panel label, .settings-panel input[type="checkbox"] {
+  transition: all 0.2s ease-in-out;
+}
+button:hover, .settings-panel input[type="checkbox"]:hover {
+  transform: scale(1.05);
+}
+
+.tool-window[style*="display: none"] {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-out;
+}
+.tool-window:not([style*="display: none"]) {
+  opacity: 1;
+  transition: opacity 0.3s ease-in;
+}
+</style>
+
+
+<style>
+.tool-window {
+  resize: both;
+  overflow: auto;
+  min-width: 200px;
+  min-height: 150px;
+}
+</style>
+
+</head>
+<body>
+
+
+<div class="lang-switcher" style="text-align: right; margin: 0.5rem;">
+  <label for="langSelect" style="font-weight: bold;">🌐 Language:</label>
+  <select id="langSelect" style="padding: 0.3rem;">
+    <option value="de">Deutsch</option>
+    <option value="en">English</option>
+  </select>
+</div>
+
+
+<div style="text-align: right; margin: 1rem;">
+  <button onclick="exportSettings()">💾 Export</button>
+  <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importSettings(event)">
+  <button onclick="document.getElementById('importFile').click()">📂 Import</button>
+</div>
+
+
+<div style="margin: 1rem;">
+  <label><input type="checkbox" id="autoRefresh"> 🔁 Auto-Refresh alle 5 Min</label>
+  <label style="margin-left: 1rem;">Startansicht:
+    <select id="startView">
+      <option value="list">Liste</option>
+      <option value="tiles">Kachel</option>
+    </select>
+  </label>
+  <label style="margin-left: 1rem;">Sortierung:
+    <select id="sortWindows">
+      <option value="none">Keine</option>
+      <option value="name">Name</option>
+      <option value="category">Kategorie</option>
+    </select>
+  </label>
+</div>
+
+<div style="padding: 1rem;">
+  <input id="searchInput" type="text" placeholder="🔍 Suche Fenster..." 
+         style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+</div>
+
+<div class="tool-container">
+
+<div id="stock-ticker">
+  <div id="ticker-content">Lade Börsendaten…</div>
+</div>
+
+  <header>
+    <h1 id="logo">Worldsite</h1>
+    <nav id="category-tabs">
+      <button class="tab active" data-category="alle">Alle</button>
+      <button class="tab" data-category="wetter">Wetter</button>
+      <button class="tab" data-category="news">News</button>
+      <button class="tab" data-category="finanzen">Finanzen</button>
+      <button class="tab" data-category="reisen">Reisen</button>
+      <button class="tab" data-category="technik">Technik</button>
+      <button class="tab" data-category="ki">KI & Tools</button>
+      <button class="tab" data-category="unterhaltung">Unterhaltung</button>
+    </nav>
+    <div id="controls">
+      <button id="toggle-darkmode">🌙</button>
+    </div>
+  </header>
+
+  <main id="grid-container">
+    <!-- Fensterplatzhalter -->
+    <div class="window" data-category="wetter">🌤️ Wetter</div>
+    <div class="window" data-category="news">📰 News</div>
+    <div class="window" data-category="finanzen">💰 Finanzen</div>
+    <div class="window" data-category="reisen">✈️ Reisen</div>
+    <div class="window" data-category="technik">🖥️ Technik</div>
+    <div class="window" data-category="ki">🤖 KI & Tools</div>
+    <div class="window" data-category="unterhaltung">🎬 Unterhaltung</div>
+  </main>
+
+<div data-id="win0" class="tool-window" data-category="Reisen" draggable="true">
+  <div class="window-header" style="background-color:#4ea5f5;">
+    <span class="window-title">🌍 Airbnb</span>
+    <div class="window-controls">
+      <button class="minimize-btn">−</button>
+      <button class="close-btn">👁</button>
+    </div>
+  </div>
+  <div class="window-body">
+    <a href="https://www.airbnb.com/" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+      <img src="https://seeklogo.com/images/A/airbnb-logo-FA2E0E37C5-seeklogo.com.png" alt="Airbnb Logo" width="40" height="40">
+      <div>
+        <strong>Entdecke Unterkünfte weltweit auf Airbnb</strong><br>
+        Klick hier, um die offizielle Seite in einem neuen Tab zu öffnen.
+      </div>
+    </a>
+  </div>
+</div>
+
+
+<!-- Finanzen -->
+<div data-id="win1" class="tool-window" data-category="Finanzen" draggable="true">
+  <div class="window-header" style="background-color:#28a745;">
+    <span class="window-title">📊 Finanzen.net</span>
+    <div class="window-controls"><button class="minimize-btn">−</button><button class="close-btn">👁</button></div>
+  </div>
+  <div class="window-body">
+    <iframe src="https://www.finanzen.net/" frameborder="0" width="100%" height="400"></iframe>
+  </div>
+</div>
+
+<div data-id="win1" class="tool-window" data-category="Finanzen" draggable="true">
+  <div class="window-header" style="background-color:#28a745;">
+    <span class="window-title">📈 TradingView</span>
+    <div class="window-controls"><button class="minimize-btn">−</button><button class="close-btn">👁</button></div>
+  </div>
+  <div class="window-body">
+    <iframe src="https://www.tradingview.com/" frameborder="0" width="100%" height="400"></iframe>
+  </div>
+</div>
+
+<!-- Reisen -->
+<div data-id="win0" class="tool-window" data-category="Reisen" draggable="true">
+  <div class="window-header" style="background-color:#4ea5f5;">
+    <span class="window-title">✈️ Google Flights</span>
+    <div class="window-controls"><button class="minimize-btn">−</button><button class="close-btn">👁</button></div>
+  </div>
+  <div class="window-body">
+    <iframe src="https://www.google.com/flights" frameborder="0" width="100%" height="400"></iframe>
+  </div>
+</div>
+
+<!-- Technik -->
+<div data-id="win4" class="tool-window" data-category="Technik" draggable="true">
+  <div class="window-header" style="background-color:#f58f4e;">
+    <span class="window-title">📰 Heise Online</span>
+    <div class="window-controls"><button class="minimize-btn">−</button><button class="close-btn">👁</button></div>
+  </div>
+  <div class="window-body">
+    <iframe src="https://www.heise.de/" frameborder="0" width="100%" height="400"></iframe>
+  </div>
+</div>
+
+<div data-id="win4" class="tool-window" data-category="Technik" draggable="true">
+  <div class="window-header" style="background-color:#f58f4e;">
+    <span class="window-title">💻 Golem.de</span>
+    <div class="window-controls"><button class="minimize-btn">−</button><button class="close-btn">👁</button></div>
+  </div>
+  <div class="window-body">
+    <iframe src="https://www.golem.de/" frameborder="0" width="100%" height="400"></iframe>
+  </div>
+</div>
+
+<!-- KI & Tools -->
+<div data-id="win6" class="tool-window" data-category="KI & Tools" draggable="true">
+  <div class="window-header" style="background-color:#9c27b0;">
+    <span class="window-title">🤖 ChatGPT</span>
+    <div class="window-controls"><button class="minimize-btn">−</button><button class="close-btn">👁</button></div>
+  </div>
+  <div class="window-body">
+    <iframe src="https://chat.openai.com/" frameborder="0" width="100%" height="400"></iframe>
+  </div>
+</div>
+
+<div data-id="win6" class="tool-window" data-category="KI & Tools" draggable="true">
+  <div class="window-header" style="background-color:#9c27b0;">
+    <span class="window-title">🧠 Poe.com</span>
+    <div class="window-controls"><button class="minimize-btn">−</button><button class="close-btn">👁</button></div>
+  </div>
+  <div class="window-body">
+    <iframe src="https://poe.com/" frameborder="0" width="100%" height="400"></iframe>
+  </div>
+</div>
+
+<!-- Unterhaltung -->
+<div data-id="win8" class="tool-window" data-category="Unterhaltung" draggable="true">
+  <div class="window-header" style="background-color:#ff5252;">
+    <span class="window-title">🔥 YouTube Trends</span>
+    <div class="window-controls"><button class="minimize-btn">−</button><button class="close-btn">👁</button></div>
+  </div>
+  <div class="window-body">
+    <iframe src="https://www.youtube.com/feed/trending" frameborder="0" width="100%" height="400"></iframe>
+  </div>
+</div>
+
+<div data-id="win8" class="tool-window" data-category="Unterhaltung" draggable="true">
+  <div class="window-header" style="background-color:#ff5252;">
+    <span class="window-title">🎮 Twitch</span>
+    <div class="window-controls"><button class="minimize-btn">−</button><button class="close-btn">👁</button></div>
+  </div>
+  <div class="window-body">
+    <iframe src="https://www.twitch.tv/" frameborder="0" width="100%" height="400"></iframe>
+  </div>
+</div>
+
+</div>
+
+<script>
+// Darkmode speichern und anwenden
+function applyDarkmodeSetting() {
+  const dark = localStorage.getItem('darkmode') === 'true';
+  document.body.classList.toggle('dark', dark);
+}
+document.addEventListener('DOMContentLoaded', applyDarkmodeSetting);
+document.querySelector('#darkmode-toggle')?.addEventListener('click', () => {
+  const current = document.body.classList.toggle('dark');
+  localStorage.setItem('darkmode', current);
+});
+
+// Fenster-Ein-/Ausblenden speichern
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.close-btn').forEach((btn, i) => {
+    const window = btn.closest('.tool-window');
+    const id = 'win_' + i;
+    window.dataset.id = id;
+    const hidden = localStorage.getItem(id) === 'hidden';
+    if (hidden) window.style.display = 'none';
+
+    btn.addEventListener('click', () => {
+      const hidden = window.style.display === 'none';
+      window.style.display = hidden ? '' : 'none';
+      localStorage.setItem(id, hidden ? '' : 'hidden');
+    });
+  });
+});
+
+// Ansicht speichern (Kachel vs. Liste – nur wenn implementiert)
+document.querySelector('#view-toggle-list')?.addEventListener('click', () => {
+  localStorage.setItem('view', 'list');
+});
+document.querySelector('#view-toggle-grid')?.addEventListener('click', () => {
+  localStorage.setItem('view', 'grid');
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const view = localStorage.getItem('view');
+  if (view === 'list') document.body.classList.add('list-view');
+  if (view === 'grid') document.body.classList.remove('list-view');
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const container = document.querySelector('.tool-container');
+  const windows = Array.from(container.children);
+
+  // Apply saved order
+  const savedOrder = JSON.parse(localStorage.getItem('windowOrder') || '[]');
+  if (savedOrder.length) {
+    savedOrder.forEach(id => {
+      const el = windows.find(w => w.dataset.id === id);
+      if (el) container.appendChild(el);
+    });
+  }
+
+  // Make draggable
+  windows.forEach(win => {
+    win.setAttribute('draggable', true);
+    win.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', win.dataset.id);
+    });
+  });
+
+  container.addEventListener('dragover', e => e.preventDefault());
+
+  container.addEventListener('drop', e => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    const draggedEl = windows.find(w => w.dataset.id === id);
+    const target = e.target.closest('.tool-window');
+    if (draggedEl && target && draggedEl !== target) {
+      container.insertBefore(draggedEl, target);
+      // Update order in localStorage
+      const newOrder = Array.from(container.children).map(w => w.dataset.id);
+      localStorage.setItem('windowOrder', JSON.stringify(newOrder));
+    }
+  });
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('searchInput');
+  input?.addEventListener('input', () => {
+    const term = input.value.toLowerCase();
+    document.querySelectorAll('.tool-window').forEach(win => {
+      const text = win.innerText.toLowerCase();
+      win.style.display = text.includes(term) ? '' : 'none';
+    });
+  });
+});
+</script>
+
+
+<!-- Floating Action Button -->
+<button id="fab" title="Einstellungen" onclick="document.querySelector('.settings-panel').classList.toggle('open');">
+⚙️
+</button>
+
+<style>
+#fab {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 999;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  font-size: 24px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: all 0.3s ease-in-out;
+}
+#fab:hover {
+  transform: scale(1.1);
+  background-color: #0056b3;
+}
+.settings-panel {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 500;
+  padding: 0.5rem;
+  border-bottom: 1px solid #ccc;
+}
+.settings-panel.open {
+  display: block !important;
+}
+@media (max-width: 768px) {
+  .settings-panel {
+    display: none;
+  }
+}
+</style>
+
+
+<script>
+const translations = {
+  de: {
+    "🌐 Language:": "🌐 Sprache:",
+    "Suche Fenster...": "Suche Fenster...",
+    "Einstellungen": "Einstellungen"
+  },
+  en: {
+    "🌐 Sprache:": "🌐 Language:",
+    "Suche Fenster...": "Search windows...",
+    "Einstellungen": "Settings"
+  }
+};
+
+function updateLanguage(lang) {
+  const t = translations[lang];
+  document.querySelectorAll('label, h3, button, input::placeholder').forEach(el => {
+    Object.entries(t).forEach(([from, to]) => {
+      if (el.innerHTML?.includes(from)) el.innerHTML = el.innerHTML.replace(from, to);
+      if (el.placeholder === from) el.placeholder = to;
+      if (el.title === from) el.title = to;
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const savedLang = localStorage.getItem('lang') || 'de';
+  document.getElementById('langSelect').value = savedLang;
+  updateLanguage(savedLang);
+
+  document.getElementById('langSelect').addEventListener('change', e => {
+    const lang = e.target.value;
+    localStorage.setItem('lang', lang);
+    updateLanguage(lang);
+  });
+});
+</script>
+
+
+<script>
+function exportSettings() {
+  const settings = {
+    lang: localStorage.getItem('lang') || 'de',
+    darkmode: localStorage.getItem('darkmode') || 'off',
+    layout: localStorage.getItem('layout') || 'list',
+    hidden: JSON.parse(localStorage.getItem('hiddenWindows') || '[]'),
+  };
+  const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'worldsite-settings.json';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function importSettings(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const settings = JSON.parse(e.target.result);
+      if (settings.lang) localStorage.setItem('lang', settings.lang);
+      if (settings.darkmode) localStorage.setItem('darkmode', settings.darkmode);
+      if (settings.layout) localStorage.setItem('layout', settings.layout);
+      if (settings.hidden) localStorage.setItem('hiddenWindows', JSON.stringify(settings.hidden));
+      location.reload();
+    } catch (err) {
+      alert('Fehler beim Import der Einstellungen!');
+    }
+  };
+  reader.readAsText(file);
+}
+</script>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Startansicht
+  const view = localStorage.getItem("layout") || "list";
+  document.getElementById("startView").value = view;
+  document.getElementById("startView").addEventListener("change", e => {
+    localStorage.setItem("layout", e.target.value);
+    location.reload();
+  });
+
+  // Auto-Refresh
+  const autoRefresh = localStorage.getItem("autoRefresh") === "true";
+  document.getElementById("autoRefresh").checked = autoRefresh;
+  document.getElementById("autoRefresh").addEventListener("change", e => {
+    localStorage.setItem("autoRefresh", e.target.checked);
+    location.reload();
+  });
+  if (autoRefresh) setInterval(() => location.reload(), 5 * 60 * 1000);
+
+  // Sortierung
+  const sortType = localStorage.getItem("sortWindows") || "none";
+  document.getElementById("sortWindows").value = sortType;
+  const container = document.querySelector(".windows-container");
+  if (sortType !== "none") {
+    const windows = Array.from(container.children);
+    windows.sort((a, b) => {
+      if (sortType === "name") {
+        return a.querySelector("h3")?.innerText.localeCompare(b.querySelector("h3")?.innerText);
+      }
+      if (sortType === "category") {
+        return (a.dataset.category || "").localeCompare(b.dataset.category || "");
+      }
+    });
+    windows.forEach(w => container.appendChild(w));
+  }
+  document.getElementById("sortWindows").addEventListener("change", e => {
+    localStorage.setItem("sortWindows", e.target.value);
+    location.reload();
+  });
+});
+</script>
+
+</body>
+</html>
